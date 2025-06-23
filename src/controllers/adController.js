@@ -84,22 +84,14 @@ export const createAd = async (req, res) => {
     }
 };
 
-export const getAds = async (_, res) => {
+export const getAds = async (req, res) => {
     try {
         const db = admin.firestore();
         const adsSnapshot = await db.collection('ads').get();
-        const adsList = adsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            // Convert Firestore Timestamp fields to ISO strings if present
-            if (data.startDate && data.startDate.toDate) data.startDate = data.startDate.toDate().toISOString();
-            if (data.endDate && data.endDate.toDate) data.endDate = data.endDate.toDate().toISOString();
-            if (data.createdAt && data.createdAt.toDate) data.createdAt = data.createdAt.toDate().toISOString();
-            if (data.updatedAt && data.updatedAt.toDate) data.updatedAt = data.updatedAt.toDate().toISOString();
-            return {
-                id: doc.id,
-                ...data
-            };
-        });
+        const adsList = adsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
 
         res.status(200).json(adsList);
     } catch (error) {
@@ -118,14 +110,7 @@ export const getAdById = async (req, res) => {
             return res.status(404).json({ message: 'Ad not found' });
         }
 
-        const adData = adDoc.data();
-        // Convert Firestore Timestamp fields to ISO strings if present
-        if (adData.startDate && adData.startDate.toDate) adData.startDate = adData.startDate.toDate().toISOString();
-        if (adData.endDate && adData.endDate.toDate) adData.endDate = adData.endDate.toDate().toISOString();
-        if (adData.createdAt && adData.createdAt.toDate) adData.createdAt = adData.createdAt.toDate().toISOString();
-        if (adData.updatedAt && adData.updatedAt.toDate) adData.updatedAt = adData.updatedAt.toDate().toISOString();
-
-        res.status(200).json({ id: adDoc.id, ...adData });
+        res.status(200).json({ id: adDoc.id, ...adDoc.data() });
     } catch (error) {
         console.log("Error while fetching ad by ID:", error);
         res.status(500).json({ message: 'Failed to fetch ad', error });
@@ -234,9 +219,7 @@ export const getRandomAd = async (req, res) => {
         // Loop through ads to find one that meets the requirements
         let randomAd = null;
         for (let ad of ads) {
-            // Convert Firestore Timestamp to JS Date if necessary
-            let adExpirationDate = ad.endDate && ad.endDate.toDate ? ad.endDate.toDate() : new Date(ad.endDate);
-            let adUpdatedAt = ad.updatedAt && ad.updatedAt.toDate ? ad.updatedAt.toDate() : new Date(ad.updatedAt);
+            const adExpirationDate = new Date(ad.endDate);
             const adCurrentDate = new Date();
 
             // Check if the ad's end date has passed, if so, mark it as inactive
@@ -247,9 +230,7 @@ export const getRandomAd = async (req, res) => {
             }
 
             // Reset displayedToday if the updatedAt date is older than today
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-            if (adUpdatedAt < todayStart) {
+            if (new Date(ad.updatedAt) < currentDate.setHours(0, 0, 0, 0)) {
                 await db.collection('ads').doc(ad.id).update({ displayedToday: 0 });
                 console.log(`Ad ${ad.id} displayedToday reset.`);
             }
