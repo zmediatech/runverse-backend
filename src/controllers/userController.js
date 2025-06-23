@@ -499,6 +499,9 @@ export async function getUserById(req, res) {
       previousStats.steps += stats.steps || 0;
     });
 
+    // Round distance to 2 decimal places
+    previousStats.distance = Number(previousStats.distance.toFixed(2));
+
     userData.previousStats = previousStats;
 
     // Token allocation logic for all thresholds
