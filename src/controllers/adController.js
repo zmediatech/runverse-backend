@@ -35,7 +35,7 @@ export const createAd = async (req, res) => {
             // Upload main image if available
             if (req.files.image) {
                 imageUrl = await uploadToWordPress(req.files.image[0]);
-                imageFileName = req.files.image[0].originalname;
+                imageFileName = req.files.image[0].originalname.replace(/\.[^/.]+$/, "");
                 console.log('Main image uploaded successfully:', imageUrl);
             }
         }
