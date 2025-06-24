@@ -22,6 +22,7 @@ export const createAd = async (req, res) => {
         // Variables to store image URLs
         let logoUrl;
         let imageUrl;
+        let imageFileName;
 
         // Handle file uploads (logo and main image)
         if (req.files) {
@@ -31,16 +32,28 @@ export const createAd = async (req, res) => {
                 console.log('Logo uploaded successfully:', logoUrl);
             }
 
-            // Upload main image if availableS
+            // Upload main image if available
             if (req.files.image) {
                 imageUrl = await uploadToWordPress(req.files.image[0]);
+                imageFileName = req.files.image[0].originalname;
                 console.log('Main image uploaded successfully:', imageUrl);
             }
         }
 
-        // Validation check for required fields
-        if (!adType || !heading || !description || !url || !startDate || !endDate || !displayCount) {
-            return res.status(400).json({ message: 'Missing required fields' });
+        // Validation based on format
+        if (format === 'custom') {
+            if (!adType || !heading || !subheading || !description || !url || !startDate || !endDate || !displayCount) {
+                return res.status(400).json({ message: 'Missing required fields for custom format' });
+            }
+        } else if (format === 'image') {
+            if (!imageUrl) {
+                return res.status(400).json({ message: 'Image is required for image format' });
+            }
+            if (!adType || !url || !startDate || !endDate || !displayCount) {
+                return res.status(400).json({ message: 'Missing required fields for image format' });
+            }
+        } else {
+            return res.status(400).json({ message: 'Invalid format' });
         }
 
         // Calculate per day display count based on displayCount and the number of days between startDate and endDate
@@ -55,7 +68,11 @@ export const createAd = async (req, res) => {
 
         if (adType) newAd.adType = adType;
         if (format) newAd.format = format;
-        if (heading) newAd.heading = heading;
+        if (format === 'image' && imageFileName) {
+            newAd.heading = imageFileName;
+        } else if (heading) {
+            newAd.heading = heading;
+        }
         if (subheading) newAd.subheading = subheading;
         if (description) newAd.description = description;
         if (url) newAd.url = url;
